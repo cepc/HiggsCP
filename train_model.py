@@ -47,7 +47,8 @@ def main():
     print ('part1')   
 
     # get root files and convert them to array
-    branch_names = """ZPx,ZPy,ZPz,ZE,HiggsPx,HiggsPy,HiggsPz,HiggsE,MuonZPlusPx,MuonZPlusPy,MuonZPlusPz,MuonZPlusE,MuonZMinusPx,MuonZMinusPy,MuonZMinusPz,MuonZMinusE,Muon1PlusPx,Muon1PlusPy,Muon1PlusPz,Muon1PlusE,Muon1MinusPx,Muon1MinusPy,Muon1MinusPz,Muon1MinusE,Muon2PlusPx,Muon2PlusPy,Muon2PlusPz,Muon2PlusE,Muon2MinusPx,Muon2MinusPy,Muon2MinusPz,Muon2MinusE""".split(",")
+#    branch_names = """ZPx,ZPy,ZPz,ZE,HiggsPx,HiggsPy,HiggsPz,HiggsE,MuonZPlusPx,MuonZPlusPy,MuonZPlusPz,MuonZPlusE,MuonZMinusPx,MuonZMinusPy,MuonZMinusPz,MuonZMinusE,Muon1PlusPx,Muon1PlusPy,Muon1PlusPz,Muon1PlusE,Muon1MinusPx,Muon1MinusPy,Muon1MinusPz,Muon1MinusE,Muon2PlusPx,Muon2PlusPy,Muon2PlusPz,Muon2PlusE,Muon2MinusPx,Muon2MinusPy,Muon2MinusPz,Muon2MinusE""".split(",")
+    branch_names = """costheta1,costheta2,costhetas""".split(",")
 #    branch_names = """ZPx,ZPy,ZPz,ZE,HiggsPx,HiggsPy,HiggsPz,HiggsE""".split(",")
 #    branch_names = """MuonZPlusPx,MuonZPlusPy,MuonZPlusPz,MuonZPlusE,MuonZMinusPx,MuonZMinusPy,MuonZMinusPz,MuonZMinusE,Muon1PlusPx,Muon1PlusPy,Muon1PlusPz,Muon1PlusE,Muon1MinusPx,Muon1MinusPy,Muon1MinusPz,Muon1MinusE,Muon2PlusPx,Muon2PlusPy,Muon2PlusPz,Muon2PlusE,Muon2MinusPx,Muon2MinusPy,Muon2MinusPz,Muon2MinusE""".split(",")
 
@@ -61,12 +62,15 @@ def main():
     backgr0 = tree2.AsMatrix(columns=branch_names)
     backgr = backgr0[:1000,:]
 
+    signal = np.insert(signal, 3, np.full(len(signal), 1), axis=1) 
+    backgr = np.insert(backgr, 3, np.full(len(backgr), 10), axis=1)
+
+    print ('Backgrounds:', backgr)
+
     # for sklearn data is usually organised into one 2D array of shape (n_samples * n_features)
     # containing all the data and one array of categories of length n_samples
     X_raw = np.concatenate((signal, backgr))
     y_raw = np.concatenate((np.ones(signal.shape[0]), np.zeros(backgr.shape[0])))
-    print(len(signal))
-
     print ('part2')
 
     #imbalanced learn
@@ -120,17 +124,23 @@ def main():
     Training Part
     """
     # Train and test
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=3443)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=3543)
+    print ("X_train:", X_train)
+    weights = X_train[:, 3]
+    print ("weights:", weights)
+    X_train = np.delete(X_train, 3, 1)
+    X_test = np.delete(X_test, 3, 1)
+    print ("X_train:", X_train)
 
     dt = DecisionTreeClassifier(max_depth=1, min_samples_leaf=10, min_samples_split=20)
 
     bdt = AdaBoostClassifier(dt, algorithm='SAMME', n_estimators=800, learning_rate=0.5)
-    bdt.fit(X_train, y_train)
+    bdt.fit(X_train, y_train, sample_weight = weights)
 
     importances = bdt.feature_importances_
     f = open('bdt_results/output_importance.txt', 'w')
     f.write("%-25s%-15s\n"%('Variable Name','Output Importance'))
-    for i in range (32):
+    for i in range (3):
         f.write("%-25s%-15s\n"%(branch_names[i], importances[i]))
         print("%-25s%-15s\n"%(branch_names[i], importances[i]), file=f)
     f.close() 
