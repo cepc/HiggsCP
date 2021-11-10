@@ -4,7 +4,6 @@
 import sys
 import os
 import random
-#import pandas as pd
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -34,8 +33,7 @@ from sklearn.model_selection import learning_curve
 from sklearn.model_selection import ShuffleSplit
 from sklearn.svm import SVC
 
-
-import xgboost as xgb
+#import xgboost as xgb
 
 def usage():
 	print ('test usage')
@@ -82,10 +80,8 @@ def main():
     backgr = backgr0[:100000,:]
     #backgr = backgr0[:100000,:]
 
-    print('signal')
-    print(signal)
-    print('backgr')
-    print(backgr)
+    signal = np.insert(signal, 3, np.full(len(signal), 1), axis=1) 
+    backgr = np.insert(backgr, 3, np.full(len(backgr), 10), axis=1)
 
     # for sklearn data is usually organised into one 2D array of shape (n_samples * n_features)
     # containing all the data and one array of categories of length n_samples
@@ -149,7 +145,10 @@ def main():
     Training Part
     """
     # Train and test
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.40, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=3543)
+    weights = X_train[:, 3]
+    X_train = np.delete(X_train, 3, 1)
+    X_test = np.delete(X_test, 3, 1)
 
     #dt = DecisionTreeClassifier(max_depth=51, min_samples_leaf=20, min_samples_split=40)
 
@@ -157,7 +156,7 @@ def main():
     dt = DecisionTreeClassifier(max_depth=5, min_samples_leaf=100, min_samples_split=10)
    
     bdt = AdaBoostClassifier(dt, algorithm='SAMME', n_estimators=200, learning_rate=0.2)
-    bdt.fit(X_train, y_train)
+    bdt.fit(X_train, y_train, sample_weight = weights)
 
     importances = bdt.feature_importances_
     f = open('bdt_results/output_importance_New.txt', 'w')
